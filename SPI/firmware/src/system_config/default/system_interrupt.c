@@ -77,7 +77,7 @@ void __ISR(_UART_1_VECTOR, ipl1AUTO) _IntHandlerDrvUsartInstance0(void)
 }
 
 
- void __ISR(_SPI_4_VECTOR, IPL3AUTO) _SPI4ISR(void)
+ void __ISR(_SPI_4_VECTOR, IPL1AUTO) _SPI4ISR(void)
 {
 //     if (IFS1bits.SPI2RXIF == 1)
 //     {

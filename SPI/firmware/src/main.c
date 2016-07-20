@@ -1,59 +1,4 @@
-/*******************************************************************************
-  MPLAB Harmony Project Main Source File
 
-  Company:
-    Microchip Technology Inc.
-  
-  File Name:
-    main.c
-
-  Summary:
-    This file contains the "main" function for an MPLAB Harmony project.
-
-  Description:
-    This file contains the "main" function for an MPLAB Harmony project.  The
-    "main" function calls the "SYS_Initialize" function to initialize the state 
-    machines of all MPLAB Harmony modules in the system and it calls the 
-    "SYS_Tasks" function from within a system-wide "super" loop to maintain 
-    their correct operation. These two functions are implemented in 
-    configuration-specific files (usually "system_init.c" and "system_tasks.c")
-    in a configuration-specific folder under the "src/system_config" folder 
-    within this project's top-level folder.  An MPLAB Harmony project may have
-    more than one configuration, each contained within it's own folder under
-    the "system_config" folder.
- *******************************************************************************/
-
-// DOM-IGNORE-BEGIN
-/*******************************************************************************
-Copyright (c) 2013-2014 released Microchip Technology Inc.  All rights reserved.
-
-//Microchip licenses to you the right to use, modify, copy and distribute
-Software only when embedded on a Microchip microcontroller or digital signal
-controller that is integrated into your product or third party product
-(pursuant to the sublicense terms in the accompanying license agreement).
-
-You should refer to the license agreement accompanying this Software for
-additional information regarding your rights and obligations.
-
-SOFTWARE AND DOCUMENTATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND,
-EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF
-MERCHANTABILITY, TITLE, NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE.
-IN NO EVENT SHALL MICROCHIP OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER
-CONTRACT, NEGLIGENCE, STRICT LIABILITY, CONTRIBUTION, BREACH OF WARRANTY, OR
-OTHER LEGAL EQUITABLE THEORY ANY DIRECT OR INDIRECT DAMAGES OR EXPENSES
-INCLUDING BUT NOT LIMITED TO ANY INCIDENTAL, SPECIAL, INDIRECT, PUNITIVE OR
-CONSEQUENTIAL DAMAGES, LOST PROFITS OR LOST DATA, COST OF PROCUREMENT OF
-SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
-(INCLUDING BUT NOT LIMITED TO ANY DEFENSE THEREOF), OR OTHER SIMILAR COSTS.
- *******************************************************************************/
-// DOM-IGNORE-END
-
-
-// *****************************************************************************
-// *****************************************************************************
-// Section: Included Files
-// *****************************************************************************
-// *****************************************************************************
     unsigned char count = 0;    
     unsigned char chrs = 0;
     unsigned char SPIRX = 0;
@@ -64,11 +9,6 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "system/common/sys_module.h"   // SYS function prototypes
 
 
-// *****************************************************************************
-// *****************************************************************************
-// Section: Main Entry Point
-// *****************************************************************************
-// *****************************************************************************
 
 #define ENCa PORTDbits.RD2  // pin 6
 #define ENCb PORTEbits.RE9  // pin 7
@@ -83,8 +23,8 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 //#define MISOIN      PORTGbits.RG7       
 //#define MISOTRIS    TRISGbits.TRISG7            //PIN 29 not used
 // MISO pin Master IN   SPI2
-#define MOSIOUT     LATGbits.LATG8              //PIN 43 diode to 17
-#define MOSI        PORTGbits.RG8
+#define MOSI     LATGbits.LATG8              //PIN 43 diode to 17
+#define MOSIIN        PORTGbits.RG8
 #define MOSITRIS    TRISGbits.TRISG8            //PIN 43
 // Clock pin            
 #define CLK         LATGbits.LATG6              //PIN 52 diode to 14
@@ -222,7 +162,7 @@ int main ( void )
     x = 0xe0;
 
 init_spihw4();               // sets up SPI2 & 4 (4 is ued to read & sniff) 2 used to send
-//init_spihw2();
+init_spihw2();
       
     while ( true )
     {
@@ -231,7 +171,7 @@ init_spihw4();               // sets up SPI2 & 4 (4 is ued to read & sniff) 2 us
         {
           // init96k();              
            //send_SPI(0x28);
-            SPI4BUF = 0x28;
+            SPI2BUF = 0x28;
            //while(1);
            //HSTRIS = 1;
            //HS = 1;       
@@ -308,8 +248,8 @@ void init_spihw4(void)
     TRISFbits.TRISF5  = 1;  // SDO3     J4-6
     TRISAbits.TRISA14  = 1;  // HW handshake line
     // SPI HW 4 reads data from the bus.
-    IPC8bits.SPI4IP   = 3;
-    IPC8bits.SPI4IS   = 1;
+    IPC8bits.SPI4IP   = 1;
+    IPC8bits.SPI4IS   = 0;
     IFS1bits.SPI4RXIF = 0;
     IEC1bits.SPI4RXIE = 1;
     SPI4STAT = 0;
@@ -320,7 +260,7 @@ void init_spihw4(void)
     SPI4CONbits.CKE = 0;            // should be 0 to read the camera properly
     SPI4CONbits.MSTEN = 1;          // slave mode
     SPI4CONbits.STXISEL = 00;       // TX interrupt 
-    SPI4CONbits.SRXISEL = 00;       // RX interrupt when we have anything in the buffer
+    SPI4CONbits.SRXISEL = 01;       // RX interrupt when we have anything in the buffer
     SPI4CONbits.MODE16 = 0;
     SPI4CONbits.MODE32 = 0;    
     SPI4CONbits.ON = 1;         // ON/OFF          
@@ -328,10 +268,12 @@ void init_spihw4(void)
 
 void init_spihw2(void)
 {
-    TRISGbits.TRISG8 = 0;   // MOSI2
-    TRISGbits.TRISG6 = 0;   // CLK2
-    LATGbits.LATG6 = 1;
-    LATGbits.LATG8 = 1;
+//    TRISGbits.TRISG8 = 0;   // MOSI2
+//    TRISGbits.TRISG6 = 0;   // CLK2
+//    LATGbits.LATG6 = 1;
+//    LATGbits.LATG8 = 1;
+    MOSITRIS = 0;
+    CLKTRIS = 0;    
        // SPI HW 2 used to send data to the lens
     SPI2BRG = baud96k;      // 420= 96K2hz 255 = 156k    
     IPC7bits.SPI2IP   = 1;
@@ -340,7 +282,7 @@ void init_spihw2(void)
     IEC1bits.SPI2RXIE = 0;
     SPI2STAT = 0;
     SPI2CON = 0;
-    SPI2CONbits.ENHBUF  = 1;        // hardware 8 byte buffer
+    SPI2CONbits.ENHBUF  = 0;        // hardware 8 byte buffer
     SPI2CONbits.CKP = 1;            // clock polarity
     SPI2CONbits.CKE = 0;            // clock edge
     SPI2CONbits.SMP = 0;
@@ -350,7 +292,7 @@ void init_spihw2(void)
     SPI2CONbits.MODE16 = 0;
     SPI2CONbits.MODE32 = 0;    
 
-    SPI2CONbits.ON = 0;         // ON/OFF    
+    SPI2CONbits.ON = 1;         // ON/OFF    
     SPI2CONbits.DISSDO = 0;
 
     
