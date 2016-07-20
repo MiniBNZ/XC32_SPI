@@ -169,13 +169,13 @@ init_spihw2();
         if (sw1 == 0)
         if (sw2clear == 1)
         {
-          // init96k();              
-           //send_SPI(0x28);
-            SPI2BUF = 0x28;
+           init96k();              
+           send_SPI(0x28);
+           // SPI2BUF = 0x28;
            //while(1);
            //HSTRIS = 1;
            //HS = 1;       
-           //read_SPI(44);           
+           read_SPI(44);           
             sw2clear = 0;
             }
         if (sw2 == 0)
@@ -211,34 +211,31 @@ init_spihw2();
     /* Execution should not come here during normal operation */    
     return ( EXIT_FAILURE );
 }
-/*
+
 unsigned char read_SPI(unsigned char num)
 {  
     chrs = 0;           //chars received counter gets incremented in ISR's
-//    HSTRIS = 1;
-//    HS = 1;
-while(SPI4STATbits.SPIBUSY == 1)
-    {
-        temp++;
-    }
-ERROR_PIN4 = 1;
+    HSTRIS = 1;
+    HS = 1;
+    while(SPI4STATbits.SPIBUSY == 1);
+    ERROR_PIN0 = 1;
 
 
     while (chrs < num)
     {       
       
         while(HSIN == 1); // wait for HS to go low pulled by lens if it wants to send a reply        
+        ERROR_PIN0 = 0;
         //SPI4CONbits.DISSDO = 1; // might not be needed if we clock out zeros on the databus
-        while(SPI4STATbits.SPIBUSY == 1);
-        SPI4BUF = 0xff;         // clock out dummy data with SDO pin disabled to allow reading of the SDI pin        
+        while(SPI2STATbits.SPIBUSY == 1);
+        SPI2BUF = 0xff;         // clock out dummy data with SDO pin disabled to allow reading of the SDI pin        
         while(HSIN == 0); // wait until the line is released                 
-       chrs++;
+       //chrs++;
+        ERROR_PIN0 = 1;
     }
-     
-    SPI4CONbits.DISSDO = 0;
-    return count;
+return count;
 }
-*/
+
 void init_spihw4(void)
 {
     SPI4BRG = baud96k;
@@ -268,10 +265,7 @@ void init_spihw4(void)
 
 void init_spihw2(void)
 {
-//    TRISGbits.TRISG8 = 0;   // MOSI2
-//    TRISGbits.TRISG6 = 0;   // CLK2
-//    LATGbits.LATG6 = 1;
-//    LATGbits.LATG8 = 1;
+
     MOSITRIS = 0;
     CLKTRIS = 0;    
        // SPI HW 2 used to send data to the lens
@@ -321,23 +315,19 @@ void send_SPI(unsigned char out)
 
   
     SPI2CONbits.DISSDO  = 0;
-    ERROR_PIN4 = 1;
+
     HS = 1;     // ensure HSline is high
     HSTRIS = 0; // make handshake line output
     HS = 0;     // pull HS line low
-    SPI4BUF = hextemp;
-    ERROR_PIN4 = 0;
-//HSTRIS = 1;
+    SPI2BUF = hextemp;
+    HSTRIS = 1;
     HS = 1;
-    TRISAbits.TRISA14 = 1;
-
     temp = SPI4STATbits.SPIBUSY;
-
     while(temp == 1)
     {
         temp = SPI4STATbits.SPIBUSY;
     }
-   ERROR_PIN4 = 1;
+
     temp = PORTAbits.RA14;
     while (temp == 0)
     {
