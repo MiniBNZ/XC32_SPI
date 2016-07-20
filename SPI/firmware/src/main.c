@@ -217,23 +217,19 @@ unsigned char read_SPI(unsigned char num)
     chrs = 0;           //chars received counter gets incremented in ISR's
     HSTRIS = 1;
     HS = 1;
-    while(SPI4STATbits.SPIBUSY == 1);
-    ERROR_PIN0 = 1;
-
+    while(SPI4STATbits.SPIBUSY == 1);       // make sure the SPI bus is idle before we try and send to receive
 
     while (chrs < num)
     {       
-      
+        chrs++;
         while(HSIN == 1); // wait for HS to go low pulled by lens if it wants to send a reply        
-        ERROR_PIN0 = 0;
-        //SPI4CONbits.DISSDO = 1; // might not be needed if we clock out zeros on the databus
         while(SPI2STATbits.SPIBUSY == 1);
         SPI2BUF = 0xff;         // clock out dummy data with SDO pin disabled to allow reading of the SDI pin        
-        while(HSIN == 0); // wait until the line is released                 
-       //chrs++;
-        ERROR_PIN0 = 1;
+       if ( chrs<num )
+           while(HSIN == 0); // wait until the line is released                 
     }
-return count;
+    
+return chrs;
 }
 
 void init_spihw4(void)
@@ -246,7 +242,7 @@ void init_spihw4(void)
     TRISAbits.TRISA14  = 1;  // HW handshake line
     // SPI HW 4 reads data from the bus.
     IPC8bits.SPI4IP   = 1;
-    IPC8bits.SPI4IS   = 0;
+    IPC8bits.SPI4IS   = 1;
     IFS1bits.SPI4RXIF = 0;
     IEC1bits.SPI4RXIE = 1;
     SPI4STAT = 0;

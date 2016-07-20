@@ -79,16 +79,14 @@ void __ISR(_UART_1_VECTOR, ipl1AUTO) _IntHandlerDrvUsartInstance0(void)
 
  void __ISR(_SPI_4_VECTOR, IPL1AUTO) _SPI4ISR(void)
 {
-//     if (IFS1bits.SPI2RXIF == 1)
-//     {
-         chrs++;
-//     }
-     send_hex(SPI4BUF);  
+
+    send_hex(SPI4BUF);  
     IFS0bits.SPI1RXIF = 0;
     IFS1bits.SPI2RXIF = 0;
     IFS0bits.SPI3RXIF = 0;
     IFS1bits.SPI4RXIF = 0;
    // SPIRX = 1;
+    LATDbits.LATD8 = 1- PORTDbits.RD8;
 }
 
  
