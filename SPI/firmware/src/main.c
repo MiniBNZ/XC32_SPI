@@ -126,6 +126,8 @@ void Lens_xea(void);
 void Lens_xd5(void);
 void Lens_xd3(void);
 void Lens_xc5(void);
+void Lens_xe0(unsigned char a,unsigned char b);
+void Lens_xec(unsigned char a,unsigned char b,unsigned char c);
 void Lens_xec1(void);
 void Lens_xec2(void);
 
@@ -203,26 +205,27 @@ SPI2CONbits.DISSDO = 1;
             case 1:                       
             {       
                 init156k();    
-                Lens_x40x41();
+                Lens_ID();
                 state++;
                 break;
             }
             case 2:
             {           
-                Lens_x40();                
+                Lens_xea();             
                 state++;
                 break;
             }
             case 3:
             {
-                Lens_ID();
-                state++;
+                Lens_xe0(0xff,0x7f);   
+//                Lens_ID();
+                state=20;
                 break;
             }
             case 4:
             {
-                Lens_xc2();
-                state++;
+                send_SPI(0xe3);
+                state=20;
                 break;
             }
             case 5:
@@ -265,7 +268,6 @@ SPI2CONbits.DISSDO = 1;
             }                        
             case 11:
             {           
-
                 Lens_xec1();
                 state++;
                 break;
@@ -282,13 +284,14 @@ SPI2CONbits.DISSDO = 1;
         
  //           LATDbits.LATD8 = 1- PORTDbits.RD8;
         if (sw1 == 0)
-        if (sw2clear == 1)
+        //if (sw2clear == 1)
         {
             state = 1;         
             sw2clear = 0;
         }
         if (sw2 == 0)
-        {          
+        { 
+            Lens_xe0(0xff,0xff); 
             sw2clear = 1;
             ERROR_PIN2 = 0;   
             state = 0;
@@ -324,6 +327,26 @@ SPI2CONbits.DISSDO = 1;
     /* Execution should not come here during normal operation */    
     return ( EXIT_FAILURE );
 }
+void Lens_xe0(unsigned char a,unsigned char b)
+{
+    while(HSIN == 0);
+    send_SPI(0xE0);
+    send_SPI(0x06);
+    send_SPI(0x00);
+    send_SPI(a);
+    send_SPI(b);
+    process_spibuf(4);
+}
+void Lens_xec(unsigned char a,unsigned char b,unsigned char c)
+{
+    while(HSIN == 0);
+    send_SPI(0xEC);
+    send_SPI(a);
+    send_SPI(b);
+    send_SPI(c);
+    process_spibuf(4);
+}
+
 void Lens_xec2(void)
 {
     while(HSIN == 0);
