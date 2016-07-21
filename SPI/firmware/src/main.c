@@ -1,14 +1,19 @@
 
-    unsigned char count = 0;    
-    unsigned char chrs = 0;
+
+
+    unsigned int count = 0;    
+    unsigned int chrs = 0;
     unsigned char SPIRX = 0;
+    unsigned char x[250];
+    unsigned int y,z;      // y= place in RX buffer
+#include <xc.h>                        
 #include <stddef.h>                     // Defines NULL
 #include <stdbool.h>                    // Defines true
 #include <stdlib.h>
 #include <proc/p32mx795f512l.h>                     // Defines EXIT_FAILURE
 #include "system/common/sys_module.h"   // SYS function prototypes
-
-
+#include "system_definitions.h"         // has interrupt flag values
+#include <sys/attribs.h>
 
 #define ENCa PORTDbits.RD2  // pin 6
 #define ENCb PORTEbits.RE9  // pin 7
@@ -58,6 +63,7 @@
 
 #define baud96k 420
 #define baud156k 255 //255
+unsigned char state = 0;    // state machine to send commands to lens
 unsigned char bitcount = 9;     // when this is 9 all actions complete 0 means we need to do something with the data 8-1 capture bits
 // used for SPI mode 0,1 and 2,3
 unsigned char SPIINH = 0;    // stores the bits read when CLK is HIGH  
@@ -71,12 +77,12 @@ unsigned char temp = 0;
 unsigned char tempb = 0;
 unsigned char hextemp;
 unsigned int DELAY = 0;
-unsigned char TX_BUFFER[128];    // used to store the data to be transmitted
+unsigned char TX_BUFFER[1000];    // used to store the data to be transmitted
 unsigned char GOTSPI = 0;
 // ie the location to store the next byte
-unsigned char bcount = 1;       // used to keep track of the number of bytes being transfered 
+unsigned int bcount = 1;       // used to keep track of the number of bytes being transfered 
 // ie the location of the next byte to be sent
-unsigned char bpos = 1;         // current position in the buffer
+unsigned int bpos = 1;         // current position in the buffer
 
 unsigned int packet_count = 0;
 #define trig_packet 24
@@ -84,12 +90,11 @@ unsigned int dx,dt;        // used to create delays
     
 unsigned char encastop; // flag to stop sending enca signals
 unsigned char encbstop; // flag to stop sending encb signals
-
 unsigned char encastate;
 unsigned char encbstate;
-
 unsigned char sw2clear =0 ;
 
+void process_spibuf(unsigned char);
 void check_n_send_data_source(void);
 void send_hex(unsigned char inp);
 void HS_EDGE(void);
@@ -111,10 +116,36 @@ void dla5ms(unsigned int);
 void dlaspi(void);
 void enctest(void);
 unsigned char read_SPI(unsigned char num);  // waits while we read x number of bytes from the bus.
-unsigned char x = 0;
+
+void Lens_x40x41(void);
+void Lens_x40(void);
+void Lens_ID(void);
+void Lens_xc2(void);
+void Lens_xe7(void);
+void Lens_xea(void);
+void Lens_xd5(void);
+void Lens_xd3(void);
+void Lens_xc5(void);
+void Lens_xec1(void);
+void Lens_xec2(void);
+
+
+void __ISR(_SPI_4_VECTOR, ipl1AUTO) _SPI4ISR(void)
+{
+     y++;
+     if (y >=126)
+         y=1;
+     x[y]= SPI4BUF;
+
+    //send_hex(SPI4BUF);  
+    //addtobuf('C');
+    IFS1bits.SPI4RXIF = 0;
+}
+
+
 int main ( void )
 {
-  
+    y=0;
     /* Initialize all MPLAB Harmony modules, including application(s). */
     SYS_Initialize ( NULL );    // sets up Open drain pins and usart0
     HSTRIS      = 1;
@@ -159,29 +190,107 @@ int main ( void )
     addtobuf(0x0d);
     addtobuf(0x0a);
     
-    x = 0xe0;
+
 
 init_spihw4();               // sets up SPI2 & 4 (4 is ued to read & sniff) 2 used to send
 init_spihw2();
-      
+SPI2CONbits.DISSDO = 1;
+
     while ( true )
     {
+        switch (state)
+        {
+            case 1:                       
+            {       
+                init96k();    
+                Lens_x40x41();
+                state++;
+                break;
+            }
+            case 2:
+            {           
+                Lens_x40();                
+                state++;
+                break;
+            }
+            case 3:
+            {
+                Lens_ID();
+                state++;
+                break;
+            }
+            case 4:
+            {
+                Lens_xc2();
+                state++;
+                break;
+            }
+            case 5:
+            {
+                Lens_xe7();
+                state++;
+                break;
+            }                        
+            case 6:
+            {         
+                Lens_xc5();
+                state++;
+                break;
+            }
+            case 7:
+            {
+                Lens_xea();
+                state++;
+                break;
+            }
+            case 8:
+            {         
+                Lens_xd5();
+                state++;
+                break;
+            }
+            case 9:
+            {                
+                Lens_xd3();
+                state++;
+                break;
+            }            
+            case 10:
+            {                  
+                Lens_xc5();
+                state++;
+                break;
+            }                        
+            case 11:
+            {           
+                Lens_xec1();
+                state++;
+                break;
+            }                        
+            case 12:
+            {                           
+                ERROR_PIN4 = 1;  
+                Lens_xec2();
+                state++;
+                break;
+            }                        
+                        
+        }
+        
+ //           LATDbits.LATD8 = 1- PORTDbits.RD8;
         if (sw1 == 0)
         if (sw2clear == 1)
         {
-           init96k();              
-           send_SPI(0x28);
-           // SPI2BUF = 0x28;
-           //while(1);
-           //HSTRIS = 1;
-           //HS = 1;       
-           read_SPI(44);           
+            state = 1;         
             sw2clear = 0;
-            }
+        }
         if (sw2 == 0)
         {          
             sw2clear = 1;
-            ERROR_PIN2 = 0;            
+            ERROR_PIN2 = 0;   
+            state = 0;
+            ERROR_PIN4 = 0;
+            while(sw2 == 0);
         }
         else
         {
@@ -199,10 +308,11 @@ init_spihw2();
         if( DRV_USART0_TransmitBufferIsFull() == 0)
             {
             DRV_USART0_WriteByte(TX_BUFFER[bpos]);
-                bpos++;          
+            bpos++;          
             }
         }
-        if (bpos >= 120)
+        
+        if (bpos >= 1000)
             {
                 bpos = 1;
             }
@@ -211,22 +321,127 @@ init_spihw2();
     /* Execution should not come here during normal operation */    
     return ( EXIT_FAILURE );
 }
+void Lens_xec2(void)
+{
+    while(HSIN == 0);
+    send_SPI(0xEC);
+    send_SPI(0x88);
+    send_SPI(0x6e);
+    send_SPI(0x08);
+    process_spibuf(4);
+}
+
+void Lens_xec1(void)
+{
+    while(HSIN == 0);
+    send_SPI(0xEC);
+    send_SPI(0x98);
+    send_SPI(0xEE);
+    send_SPI(0x08);
+    process_spibuf(4);
+}
+void Lens_xd3(void)
+{
+    while(HSIN == 0);                
+    send_SPI(0xD3);
+    send_SPI(0xC3);
+    process_spibuf(2);
+}
+void Lens_xd5(void)
+{
+    send_SPI(0xD5);
+    read_SPI(4);
+    process_spibuf(5);
+}
+void Lens_xea(void)
+{
+    send_SPI(0xEA);
+    send_SPI(0x03);
+    read_SPI(1);
+    process_spibuf(3);
+    }
+
+void Lens_xc5(void)
+{
+    send_SPI(0xC5);              
+    read_SPI(8);
+    process_spibuf(9);
+}
+void Lens_xe7(void)
+{
+    send_SPI(0xE7);
+    send_SPI(0x53);
+    process_spibuf(2);
+}
+void Lens_xc2(void)
+{
+    send_SPI(0xC2);
+    read_SPI(4);
+    process_spibuf(5);
+}
+void Lens_ID(void)
+{
+    send_SPI(0x28);
+    read_SPI(44);
+    process_spibuf(45);
+}
+
+void Lens_x40(void)
+{
+    send_SPI(0x40);
+    read_SPI(7);
+    send_SPI(0x02);
+    send_SPI(0x27);    
+    process_spibuf(8);
+}
+void Lens_x40x41(void)
+{
+        send_SPI(0x40);
+        read_SPI(7);
+        process_spibuf(8);
+        send_SPI(0x02);
+        send_SPI(0x27);
+        send_SPI(0x41);
+        read_SPI(2);
+        process_spibuf(5);    
+}
+
+
+void process_spibuf(unsigned char n)
+{
+
+    addtobuf('-');
+    send_hex(state);
+    addtobuf(0x0d);
+    addtobuf(0x0a);
+    for (z=1;z <= n;z++)
+    {
+        send_hex(x[z]);   
+    }    
+    y = 0;
+    addtobuf('-');
+    send_hex(state);
+    addtobuf(0x0d);
+    addtobuf(0x0a);
+    //state++;
+    //state = 1;
+}
 
 unsigned char read_SPI(unsigned char num)
 {  
     chrs = 0;           //chars received counter gets incremented in ISR's
     HSTRIS = 1;
     HS = 1;
-    while(SPI4STATbits.SPIBUSY == 1);       // make sure the SPI bus is idle before we try and send to receive
+    while(SPI2STATbits.SPIBUSY == 1);       // make sure the SPI bus is idle before we try and send to receive
 
     while (chrs < num)
     {       
         chrs++;
-        while(HSIN == 1); // wait for HS to go low pulled by lens if it wants to send a reply        
-        while(SPI2STATbits.SPIBUSY == 1);
+        while(HSIN == 1); // wait for HS to go low pulled by lens if it wants to send a reply   
         SPI2BUF = 0xff;         // clock out dummy data with SDO pin disabled to allow reading of the SDI pin        
+        while(SPI2STATbits.SPIBUSY == 1);
        if ( chrs<num )
-           while(HSIN == 0); // wait until the line is released                 
+          while(HSIN == 0); // wait until the line is released                 
     }
     
 return chrs;
@@ -251,7 +466,7 @@ void init_spihw4(void)
     SPI4CONbits.ENHBUF  = 0;        // hardware 8 byte buffer
     SPI4CONbits.CKP = 1;            // clock polarity should be 1 to read properly.
     SPI4CONbits.CKE = 0;            // should be 0 to read the camera properly
-    SPI4CONbits.MSTEN = 1;          // slave mode
+    SPI4CONbits.MSTEN = 0;          // slave mode
     SPI4CONbits.STXISEL = 00;       // TX interrupt 
     SPI4CONbits.SRXISEL = 01;       // RX interrupt when we have anything in the buffer
     SPI4CONbits.MODE16 = 0;
@@ -283,9 +498,7 @@ void init_spihw2(void)
     SPI2CONbits.MODE32 = 0;    
 
     SPI2CONbits.ON = 1;         // ON/OFF    
-    SPI2CONbits.DISSDO = 0;
-
-    
+    SPI2CONbits.DISSDO = 0;    
 }
 
 void send_SPI(unsigned char out)
@@ -308,28 +521,18 @@ void send_SPI(unsigned char out)
             hextemp = hextemp + 0x40;
     if ((out & 0x01) == 0x01)
             hextemp = hextemp + 0x80;  
-
-  
+ 
     SPI2CONbits.DISSDO  = 0;
-
+    while(SPI2STATbits.SPIBUSY == 1);
+    dla100();
     HS = 1;     // ensure HSline is high
     HSTRIS = 0; // make handshake line output
     HS = 0;     // pull HS line low
     SPI2BUF = hextemp;
     HSTRIS = 1;
-    HS = 1;
-    temp = SPI4STATbits.SPIBUSY;
-    while(temp == 1)
-    {
-        temp = SPI4STATbits.SPIBUSY;
-    }
-
-    temp = PORTAbits.RA14;
-    while (temp == 0)
-    {
-        temp = PORTAbits.RA14;
-    }
-    temp =0;
+    HS = 1;    
+    while(SPI2STATbits.SPIBUSY == 1);    
+    while(HSIN == 0);
 }
 
 
@@ -506,7 +709,7 @@ unsigned char addtobuf(unsigned char byt)
 {
         bcount++;
         TX_BUFFER[bcount] = byt;
-    if (bcount >= 120)
+    if (bcount >= 1000)
     {
         bcount = 1;
     }

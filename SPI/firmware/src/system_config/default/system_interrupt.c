@@ -58,7 +58,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // Section: Included Files
 // *****************************************************************************
 // *****************************************************************************
-extern chrs;
+
 #include <xc.h>
 #include <sys/attribs.h>
 #include "app.h"
@@ -77,17 +77,6 @@ void __ISR(_UART_1_VECTOR, ipl1AUTO) _IntHandlerDrvUsartInstance0(void)
 }
 
 
- void __ISR(_SPI_4_VECTOR, IPL1AUTO) _SPI4ISR(void)
-{
-
-    send_hex(SPI4BUF);  
-    IFS0bits.SPI1RXIF = 0;
-    IFS1bits.SPI2RXIF = 0;
-    IFS0bits.SPI3RXIF = 0;
-    IFS1bits.SPI4RXIF = 0;
-   // SPIRX = 1;
-    LATDbits.LATD8 = 1- PORTDbits.RD8;
-}
 
  
 
