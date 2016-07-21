@@ -202,7 +202,7 @@ SPI2CONbits.DISSDO = 1;
         {
             case 1:                       
             {       
-                init96k();    
+                init156k();    
                 Lens_x40x41();
                 state++;
                 break;
@@ -227,25 +227,27 @@ SPI2CONbits.DISSDO = 1;
             }
             case 5:
             {
+
                 Lens_xe7();
                 state++;
                 break;
             }                        
             case 6:
-            {         
+            {                   
                 Lens_xc5();
                 state++;
                 break;
             }
             case 7:
-            {
+            {               
+
                 Lens_xea();
                 state++;
                 break;
             }
             case 8:
-            {         
-                Lens_xd5();
+            {           
+                Lens_xd5();         // 1 out 4 in
                 state++;
                 break;
             }
@@ -263,13 +265,14 @@ SPI2CONbits.DISSDO = 1;
             }                        
             case 11:
             {           
+
                 Lens_xec1();
                 state++;
                 break;
             }                        
             case 12:
             {                           
-                ERROR_PIN4 = 1;  
+                ERROR_PIN4 = 1;
                 Lens_xec2();
                 state++;
                 break;
@@ -357,8 +360,8 @@ void Lens_xea(void)
 {
     send_SPI(0xEA);
     send_SPI(0x03);
-    read_SPI(1);
-    process_spibuf(3);
+   // read_SPI(1);
+    process_spibuf(2);
     }
 
 void Lens_xc5(void)
