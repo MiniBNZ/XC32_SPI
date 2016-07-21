@@ -327,8 +327,9 @@ SPI2CONbits.DISSDO = 1;
     /* Execution should not come here during normal operation */    
     return ( EXIT_FAILURE );
 }
-void Lens_xe0(unsigned char a,unsigned char b)
+void Lens_xe0(unsigned char a,unsigned char b)  
 {
+    // working with 0xffff and 0xff7f 
     while(HSIN == 0);
     send_SPI(0xE0);
     send_SPI(0x06);
@@ -380,7 +381,7 @@ void Lens_xd5(void)
     process_spibuf(5);
 }
 void Lens_xea(void)
-{
+{                       //appears to be functional. i get encoder pulses..
     send_SPI(0xEA);
     send_SPI(0x03);
    // read_SPI(1);
@@ -406,7 +407,7 @@ void Lens_xc2(void)
     process_spibuf(5);
 }
 void Lens_ID(void)
-{
+{   // works. i get the 44 bytes from the lens.
     send_SPI(0x28);
     read_SPI(44);
     process_spibuf(45);
