@@ -126,10 +126,11 @@ void Lens_xea(void);
 void Lens_xd5(void);
 void Lens_xd3(void);
 void Lens_xc5(void);
-void Lens_xe0(unsigned char a,unsigned char b);
+void Lens_xe0(unsigned char a,unsigned char b,unsigned char c,unsigned char d);
 void Lens_xec(unsigned char a,unsigned char b,unsigned char c);
 void Lens_xec1(void);
 void Lens_xec2(void);
+void Lens_xe8(unsigned char a,unsigned char b,unsigned char c,unsigned char d,unsigned char e);
 
 
 void __ISR(_SPI_4_VECTOR, ipl1AUTO) _SPI4ISR(void)
@@ -212,12 +213,12 @@ SPI2CONbits.DISSDO = 1;
             case 2:
             {           
                 Lens_xea();             
-                state++;
+                state=12;
                 break;
             }
             case 3:
             {
-                Lens_xe0(0xff,0x7f);   
+//                Lens_xe8(0x00,0x00,0x7f,0x00,0x00);   
 //                Lens_ID();
                 state=20;
                 break;
@@ -274,15 +275,12 @@ SPI2CONbits.DISSDO = 1;
             }                        
             case 12:
             {                           
-                ERROR_PIN4 = 1;
-                Lens_xec2();
+                ERROR_PIN4 = 1;               
+                Lens_xe0(0x00,0x00,0x00,0b00000001); 
                 state++;
                 break;
-            }                        
-                        
-        }
-        
- //           LATDbits.LATD8 = 1- PORTDbits.RD8;
+            }                                                
+        }        
         if (sw1 == 0)
         //if (sw2clear == 1)
         {
@@ -291,7 +289,7 @@ SPI2CONbits.DISSDO = 1;
         }
         if (sw2 == 0)
         { 
-            Lens_xe0(0xff,0xff); 
+            Lens_xe0(0x00,0x00,0x00, 0b10000001);   
             sw2clear = 1;
             ERROR_PIN2 = 0;   
             state = 0;
@@ -302,7 +300,6 @@ SPI2CONbits.DISSDO = 1;
         {
             ERROR_PIN2 = 1;                       
         }
-      
         /* Maintain state machines of all polled MPLAB Harmony modules. */
         SYS_Tasks ( );              // DONT think this does any thing was added by harmony config (we dont read the usart)
         //scratchnsniff_SPI();       // this will read spi if in slave mode and send in hex to usart with lens/cam framing    
@@ -327,22 +324,38 @@ SPI2CONbits.DISSDO = 1;
     /* Execution should not come here during normal operation */    
     return ( EXIT_FAILURE );
 }
-void Lens_xe0(unsigned char a,unsigned char b)  
+void Lens_xe8(unsigned char a,unsigned char b,unsigned char c,unsigned char d,unsigned char e)  
+{
+    // working with  
+    // Lens_xe8(0xff, 0xff, 0xff, 0xff,0xff);   // towards inf
+    // Lens_xe8(0x00,0x00,0x7f,0x00,0x00);      // away from inf 
+    while(HSIN == 0);
+    send_SPI(0xE8);
+    send_SPI(a);     
+    send_SPI(b);     
+    send_SPI(c);        // 0x01 -> 0x7f appear to control the speed and or acceleration bit7 = direction 1=inf 0=close
+    send_SPI(d);        
+    send_SPI(e);        
+    process_spibuf(6);
+}
+
+void Lens_xe0(unsigned char a,unsigned char b,unsigned char c,unsigned char d)  
 {
     // working with 0xffff and 0xff7f 
     while(HSIN == 0);
-    send_SPI(0xE0);
-    send_SPI(0x06);
-    send_SPI(0x00);
-    send_SPI(a);
-    send_SPI(b);
+    send_SPI(0xe0);
+    send_SPI(a);     // doesnt appear to have any effect
+    send_SPI(b);     // doesnt appear to have any effect
+    send_SPI(c);        // bit 6 appears to control the direction
+    send_SPI(d);        // cant see any effects on anything
     process_spibuf(4);
 }
+
 void Lens_xec(unsigned char a,unsigned char b,unsigned char c)
-{
-    while(HSIN == 0);
+{// move the lens to the end stop point
+    while(HSIN == 0);       // EC 98 EE 08   & EC 88 6E 08 from captures
     send_SPI(0xEC);
-    send_SPI(a);
+    send_SPI(a);            // bit4 = direction 0 -> to close 1->inf  bit3 is bounce mode 
     send_SPI(b);
     send_SPI(c);
     process_spibuf(4);
