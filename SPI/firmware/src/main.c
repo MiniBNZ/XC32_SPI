@@ -18,6 +18,7 @@
 #define ENCa PORTDbits.RD2  // pin 6
 #define ENCb PORTEbits.RE9  // pin 7
 
+#define sw0 PORTBbits.RB4 //        A4
 #define sw1 PORTBbits.RB0 //        A0
 #define sw2 PORTBbits.RB3 //        A3
 
@@ -170,7 +171,8 @@ int main ( void )
     
     TRISBbits.TRISB0 = 1;       //sw1 input active low
     TRISBbits.TRISB3 = 1;       //sw2 input active low
-
+    TRISBbits.TRISB5 = 1;       //sw0 input active low
+    
     HSDIRTRIS = 1;
     HSDIRSTATE = HSDIR;
     HSSTATE = HSIN;
@@ -213,22 +215,78 @@ SPI2CONbits.DISSDO = 1;
             case 2:
             {           
                 Lens_xea();             
-                state=12;
+                state=13;
                 break;
             }
             case 3:
             {
-//                Lens_xe8(0x00,0x00,0x7f,0x00,0x00);   
-//                Lens_ID();
-                state=20;
+                //Byte 0 needs to be 06 
+                //Byte 1 needs to be 00               
+                //Byte 2 is step distance/size
+                // bit 7 = 1 = 36 steps
+                // bit 6 = 1 = 17 steps
+                // bit 5 = 1 = 7 steps
+                // bit 4 = 1 = 3 steps
+                // bit 3 = 1 = 1 steps
+                // bit 2 = 1 = 0 steps
+                // bit 1 = 1 = 0 steps
+                // bit 0 = 1 = 0 steps                
+                //Byte 3 direction and a step size
+                // bit 7 = DIRECTION
+                // bit 6-0 =  step size 
+                Lens_xe0(0x04,0x00,0b00000000,0b01000000);    // sw1 action towards close
+                state=13;
                 break;
             }
             case 4:
             {
-                send_SPI(0xe3);
-                state=20;
+                Lens_xe0(0x04,0x00,0b00000000,0b11000000);    // sw2 action towards infinity
+                // 06,00,00,00 = 0    steps
+                // 06,00,01,00 = 0    steps                
+
+
+
+
+
+
+
+                // 06,00,01,00 = 0    steps
+                // 06,00,02,00 = 0    steps
+                // 06,00,04,00 = 0    steps
+                // 06,00,08,00 = 1    step  
+                // 06,00,10,00 = 3    steps                
+                // 06,00,20,00 = 7    steps
+                // 06,00,40,00 = 17   steps
+                // 06,00,80,00 = 36   steps              
+                // 06,00,00,01 = 73   steps
+                // 06,00,00,02 = 147  steps
+                // 06,00,00,04 = 299  steps
+                // 06,00,00,08 = 589  steps
+                // 06,00,00,10 = 1225 steps
+                // 06,00,00,20 = 2277 steps
+                // 06,00,00,40 = 3751 steps
+                
+                // 06,00,01,01 = 73   steps
+                // 06,00,02,01 = 73   steps
+                // 06,00,04,01 = 75   steps
+                // 06,00,08,01 = 75   steps
+                // 06,00,10,01 = 78   steps
+                // 06,00,20,01 = 82   steps
+                // 06,00,40,01 = 92   steps
+                // 06,00,80,01 = 111  steps
+                // 06,00,80,40 = 3748 steps  FSD
+                // 06,00,80,20 = 2311 steps approx 1/2 FSD
+                // 06,00,80,10 = 1201 steps approx 1/3 fsd
+                // 06,00,80,08 = 642  steps
+                // 06,00,80,04 = 333  steps 
+                // 06,00,80,02 = 185  steps
+                // 06,00,80,01 = 110  steps                
+
+                
+                state=13;
                 break;
             }
+            /*
             case 5:
             {
 
@@ -275,31 +333,36 @@ SPI2CONbits.DISSDO = 1;
             }                        
             case 12:
             {                           
-                ERROR_PIN4 = 1;               
-                Lens_xe0(0x00,0x00,0x00,0b00000001); 
+                ERROR_PIN4 = 1;              
+                 
                 state++;
                 break;
-            }                                                
+            }        
+             */                                         
         }        
-        if (sw1 == 0)
-        //if (sw2clear == 1)
+        if (sw0 == 0)
         {
             state = 1;         
-            sw2clear = 0;
-        }
-        if (sw2 == 0)
-        { 
-            Lens_xe0(0x00,0x00,0x00, 0b10000001);   
-            sw2clear = 1;
-            ERROR_PIN2 = 0;   
-            state = 0;
-            ERROR_PIN4 = 0;
-            while(sw2 == 0);
+            ERROR_PIN2 = 0;
+            while(sw0 == 0);
         }
         else
         {
             ERROR_PIN2 = 1;                       
         }
+        if (sw1 == 0)
+        {
+            state = 3;         
+            while(sw1 == 0);         
+        }
+        
+        if (sw2 == 0)
+        {                   
+            sw2clear = 1;
+            state = 4;
+            while(sw2 == 0);
+        }
+
         /* Maintain state machines of all polled MPLAB Harmony modules. */
         SYS_Tasks ( );              // DONT think this does any thing was added by harmony config (we dont read the usart)
         //scratchnsniff_SPI();       // this will read spi if in slave mode and send in hex to usart with lens/cam framing    
@@ -324,6 +387,19 @@ SPI2CONbits.DISSDO = 1;
     /* Execution should not come here during normal operation */    
     return ( EXIT_FAILURE );
 }
+
+void Lens_xe0(unsigned char a,unsigned char b,unsigned char c,unsigned char d)  
+{
+    // working with 0xffff and 0xff7f 
+    while(HSIN == 0);
+    send_SPI(0xe0);
+    send_SPI(a);     // doesnt appear to have any effect    06 for steps this might be speed or acceleration some sort of bit mask 
+    send_SPI(b);     // appears to need to be zero
+    send_SPI(c);        // cant see any effects
+    send_SPI(d);        // bit 7 controls direction bit 6-0 control distance to move.
+    process_spibuf(4);
+}
+
 void Lens_xe8(unsigned char a,unsigned char b,unsigned char c,unsigned char d,unsigned char e)  
 {
     // working with  
@@ -337,18 +413,6 @@ void Lens_xe8(unsigned char a,unsigned char b,unsigned char c,unsigned char d,un
     send_SPI(d);        
     send_SPI(e);        
     process_spibuf(6);
-}
-
-void Lens_xe0(unsigned char a,unsigned char b,unsigned char c,unsigned char d)  
-{
-    // working with 0xffff and 0xff7f 
-    while(HSIN == 0);
-    send_SPI(0xe0);
-    send_SPI(a);     // doesnt appear to have any effect
-    send_SPI(b);     // doesnt appear to have any effect
-    send_SPI(c);        // bit 6 appears to control the direction
-    send_SPI(d);        // cant see any effects on anything
-    process_spibuf(4);
 }
 
 void Lens_xec(unsigned char a,unsigned char b,unsigned char c)
