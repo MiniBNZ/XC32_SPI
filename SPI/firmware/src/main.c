@@ -122,7 +122,7 @@ void Lens_x40x41(void);
 void Lens_x40(void);
 void Lens_ID(void);
 void Lens_xc2(void);
-void Lens_xe7(void);
+void Lens_xe7(unsigned char rr);
 void Lens_xea(void);
 void Lens_xd5(void);
 void Lens_xd3(void);
@@ -234,111 +234,46 @@ SPI2CONbits.DISSDO = 1;
                 //Byte 3 direction and a step size
                 // bit 7 = DIRECTION
                 // bit 6-0 =  step size 
-                Lens_xe0(0x04,0x00,0b00000000,0b01000000);    // sw1 action towards close
+                Lens_xe0(0x06,0x00,0b00000000,0b01001000);    // sw1 action towards close
                 state=13;
                 break;
             }
             case 4:
             {
-                Lens_xe0(0x04,0x00,0b00000000,0b11000000);    // sw2 action towards infinity
-                // 06,00,00,00 = 0    steps
-                // 06,00,01,00 = 0    steps                
-
-
-
-
-
-
-
+                Lens_xe7(0b10000000);
+                // 0xff seems to stop all lense movements
+                // 0x00 seems to stop listening then needs init run to continue moving
+                // 0x01 same as above
+                // 0x02 seems to stop listening to 0xe0 commands
+                // 0x04 same as above
+                // 0x08 same as 0x02
+                // 0x10 same as above
+                // 0x20 same as above
+                // 0x40 stops actioning commands. seems to execute commands after a init
+                // 0x80 same as above
+                
+               //  Lens_xe8(0xff, 0xff, 0b1000000, 0xff,0xff);
+               // Lens_xe0(0x04,0x00,0b00000000,0b11000000);    // sw2 action towards infinity
                 // 06,00,01,00 = 0    steps
                 // 06,00,02,00 = 0    steps
                 // 06,00,04,00 = 0    steps
                 // 06,00,08,00 = 1    step  
                 // 06,00,10,00 = 3    steps                
                 // 06,00,20,00 = 7    steps
-                // 06,00,40,00 = 17   steps
+                // 06,00,40,00 = 17   steps                
                 // 06,00,80,00 = 36   steps              
-                // 06,00,00,01 = 73   steps
+
+                 // 06,00,00,01 = 73   steps
                 // 06,00,00,02 = 147  steps
                 // 06,00,00,04 = 299  steps
                 // 06,00,00,08 = 589  steps
                 // 06,00,00,10 = 1225 steps
                 // 06,00,00,20 = 2277 steps
-                // 06,00,00,40 = 3751 steps
-                
-                // 06,00,01,01 = 73   steps
-                // 06,00,02,01 = 73   steps
-                // 06,00,04,01 = 75   steps
-                // 06,00,08,01 = 75   steps
-                // 06,00,10,01 = 78   steps
-                // 06,00,20,01 = 82   steps
-                // 06,00,40,01 = 92   steps
-                // 06,00,80,01 = 111  steps
-                // 06,00,80,40 = 3748 steps  FSD
-                // 06,00,80,20 = 2311 steps approx 1/2 FSD
-                // 06,00,80,10 = 1201 steps approx 1/3 fsd
-                // 06,00,80,08 = 642  steps
-                // 06,00,80,04 = 333  steps 
-                // 06,00,80,02 = 185  steps
-                // 06,00,80,01 = 110  steps                
-
+                // 06,00,00,40 = 3751 steps             
                 
                 state=13;
                 break;
-            }
-            /*
-            case 5:
-            {
-
-                Lens_xe7();
-                state++;
-                break;
-            }                        
-            case 6:
-            {                   
-                Lens_xc5();
-                state++;
-                break;
-            }
-            case 7:
-            {               
-
-                Lens_xea();
-                state++;
-                break;
-            }
-            case 8:
-            {           
-                Lens_xd5();         // 1 out 4 in
-                state++;
-                break;
-            }
-            case 9:
-            {                
-                Lens_xd3();
-                state++;
-                break;
-            }            
-            case 10:
-            {                  
-                Lens_xc5();
-                state++;
-                break;
-            }                        
-            case 11:
-            {           
-                Lens_xec1();
-                state++;
-                break;
-            }                        
-            case 12:
-            {                           
-                ERROR_PIN4 = 1;              
-                 
-                state++;
-                break;
-            }        
-             */                                         
+            }                                     
         }        
         if (sw0 == 0)
         {
@@ -409,7 +344,11 @@ void Lens_xe8(unsigned char a,unsigned char b,unsigned char c,unsigned char d,un
     send_SPI(0xE8);
     send_SPI(a);     
     send_SPI(b);     
-    send_SPI(c);        // 0x01 -> 0x7f appear to control the speed and or acceleration bit7 = direction 1=inf 0=close
+    send_SPI(c);        
+    // 0x01 -> 0x7f appear to control the speed and or acceleration bit7 = direction 1=inf 0=close
+    // bit 7 = direction 
+    // bit 654 = speed
+    // bit 3210 = rapid distance at full speed.
     send_SPI(d);        
     send_SPI(e);        
     process_spibuf(6);
@@ -471,10 +410,10 @@ void Lens_xc5(void)
     read_SPI(8);
     process_spibuf(9);
 }
-void Lens_xe7(void)
+void Lens_xe7(unsigned char rr)
 {
     send_SPI(0xE7);
-    send_SPI(0x53);
+    send_SPI(rr);
     process_spibuf(2);
 }
 void Lens_xc2(void)
