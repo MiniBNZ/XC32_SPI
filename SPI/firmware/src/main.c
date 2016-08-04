@@ -234,26 +234,17 @@ SPI2CONbits.DISSDO = 1;
                 //Byte 3 direction and a step size
                 // bit 7 = DIRECTION
                 // bit 6-0 =  step size 
-                Lens_xe0(0x06,0x00,0b00000000,0b01001000);    // sw1 action towards close
+                Lens_xe0(0x06,0x00,0b00001000,0b00000000);    // sw1 action towards close
                 state=13;
                 break;
             }
             case 4:
             {
-                Lens_xe7(0b10000000);
-                // 0xff seems to stop all lense movements
-                // 0x00 seems to stop listening then needs init run to continue moving
-                // 0x01 same as above
-                // 0x02 seems to stop listening to 0xe0 commands
-                // 0x04 same as above
-                // 0x08 same as 0x02
-                // 0x10 same as above
-                // 0x20 same as above
-                // 0x40 stops actioning commands. seems to execute commands after a init
-                // 0x80 same as above
+                //Lens_xe7(0b10000000);
+
                 
                //  Lens_xe8(0xff, 0xff, 0b1000000, 0xff,0xff);
-               // Lens_xe0(0x04,0x00,0b00000000,0b11000000);    // sw2 action towards infinity
+                Lens_xe0(0x06,0x00,0b00001000,0b10000000);    // sw2 action towards infinity
                 // 06,00,01,00 = 0    steps
                 // 06,00,02,00 = 0    steps
                 // 06,00,04,00 = 0    steps
@@ -330,7 +321,7 @@ void Lens_xe0(unsigned char a,unsigned char b,unsigned char c,unsigned char d)
     send_SPI(0xe0);
     send_SPI(a);     // doesnt appear to have any effect    06 for steps this might be speed or acceleration some sort of bit mask 
     send_SPI(b);     // appears to need to be zero
-    send_SPI(c);        // cant see any effects
+    send_SPI(c);        // distance to move 
     send_SPI(d);        // bit 7 controls direction bit 6-0 control distance to move.
     process_spibuf(4);
 }
@@ -359,7 +350,7 @@ void Lens_xec(unsigned char a,unsigned char b,unsigned char c)
     while(HSIN == 0);       // EC 98 EE 08   & EC 88 6E 08 from captures
     send_SPI(0xEC);
     send_SPI(a);            // bit4 = direction 0 -> to close 1->inf  bit3 is bounce mode 
-    send_SPI(b);
+    send_SPI(b);            
     send_SPI(c);
     process_spibuf(4);
 }
@@ -415,6 +406,19 @@ void Lens_xe7(unsigned char rr)
     send_SPI(0xE7);
     send_SPI(rr);
     process_spibuf(2);
+    
+    // Starting to think this command E7 is a sleep command of some sort.
+                // 0xff seems to stop all lense movements
+                // 0x00 seems to stop listening then needs init run to continue moving
+                // 0x01 same as above
+                // 0x02 seems to stop listening to 0xe0 commands
+                // 0x04 same as above
+                // 0x08 same as 0x02
+                // 0x10 same as above
+                // 0x20 same as above
+                // 0x40 stops actioning commands. seems to execute commands after a init
+                // 0x80 same as above
+    
 }
 void Lens_xc2(void)
 {
