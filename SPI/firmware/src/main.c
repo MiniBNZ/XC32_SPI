@@ -132,7 +132,7 @@ void Lens_xec(unsigned char a,unsigned char b,unsigned char c);
 void Lens_xec1(void);
 void Lens_xec2(void);
 void Lens_xe8(unsigned char a,unsigned char b,unsigned char c,unsigned char d,unsigned char e);
-
+void Lens_xe3(void);
 
 void __ISR(_SPI_4_VECTOR, ipl1AUTO) _SPI4ISR(void)
 {
@@ -245,6 +245,13 @@ SPI2CONbits.DISSDO = 1;
                 
                //  Lens_xe8(0xff, 0xff, 0b1000000, 0xff,0xff);
                 Lens_xe0(0x06,0x00,0b00001000,0b10000000);    // sw2 action towards infinity
+/*                for (dx=0;dx<=8000;dx++)
+                {
+                Nop();
+                }
+*/
+                dla5ms(1200);
+                Lens_xe3();
                 // 06,00,01,00 = 0    steps
                 // 06,00,02,00 = 0    steps
                 // 06,00,04,00 = 0    steps
@@ -364,7 +371,11 @@ void Lens_xec2(void)
     send_SPI(0x08);
     process_spibuf(4);
 }
-
+void Lens_xe3(void)
+{
+    send_SPI(0xe3);
+    process_spibuf(1);
+}
 void Lens_xec1(void)
 {
     while(HSIN == 0);
